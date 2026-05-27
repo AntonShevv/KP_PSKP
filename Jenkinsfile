@@ -44,9 +44,7 @@ pipeline {
                     dir('backend') {
                         try {
                             sh 'npm test -- tests/authService.unit.test.js'
-                            env.TESTS_PASSED = 'true'
                         } catch (Exception e) {
-                            env.TESTS_PASSED = 'false'
                             error('❌ Тесты не прошли! Деплой отменен.')
                         }
                     }
@@ -55,9 +53,6 @@ pipeline {
         }
 
         stage('Docker Deploy') {
-            when {
-                expression { env.TESTS_PASSED == 'true' }
-            }
             steps {
                 echo '🚀 Тесты прошли успешно! Деплоим через Docker Compose...'
                 
