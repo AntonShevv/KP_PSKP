@@ -5,6 +5,10 @@ pipeline {
         nodejs 'NodeJS-20'
     }
 
+    environment {
+        GIT_REPO = 'https://github.com/AntonShevv/KP_PSKP.git'
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -29,7 +33,7 @@ pipeline {
                             sh 'npm run build'
                         }
                     } else {
-                        echo '⚠️ Frontend не найден, создаем заглушку...'
+                        echo '⚠️ Frontend не найден, пропускаем...'
                         sh 'mkdir -p frontend/build'
                         sh 'echo "<html><body><h1>Quiz Master API</h1></body></html>" > frontend/build/index.html'
                     }
@@ -45,56 +49,28 @@ pipeline {
             }
         }
 
-        stage('Prepare Environment') {
+        stage('Push to GitHub') {
             steps {
-                script {
-                    // Создаем .env файл если его нет
-                    if (!fileExists('backend/.env')) {
-                        writeFile file: 'backend/.env', text: '''NODE_ENV=production
-PORT=5000
-DB_HOST=sqlserver
-DB_USER=sa
-DB_PASSWORD=Qwerty0987!
-DB_NAME=OnlineQuiz
-JWT_SECRET=ci_cd_secret_key_2024
-JWT_REFRESH_SECRET=ci_cd_refresh_key_2024
-FRONTEND_URL=http://localhost'''
-                        echo "✅ Создан backend/.env файл"
-                    } else {
-                        echo "✅ backend/.env уже существует"
-                    }
-                }
-            }
-        }
-
-        stage('Docker Deploy') {
-            steps {
-                echo '🚀 Деплой через Docker Compose'
+                echo '✅ Тесты прошли успешно! Пушим в GitHub...'
                 
                 script {
+                    // Настройка git
                     sh '''
-                        # Проверяем наличие docker-compose.yml
-                        ls -la docker-compose.yml || echo "docker-compose.yml не найден"
+                        git config user.email "jenkins@ci-cd.local"
+                        git config user.name "Jenkins CI"
                         
-                        # Останавливаем старые контейнеры
-                        docker compose down --remove-orphans || docker-compose down --remove-orphans || true
+                        # Добавляем изменения
+                        git add .
                         
-                        # Запускаем новые
-                        docker compose up -d --build || docker-compose up -d --build
-                        
-                        # Проверяем статус
-                        docker compose ps || docker-compose ps
+                        # Проверяем есть ли изменения
+                        if ! git diff --cached --quiet; then
+                            git commit -m "Auto-commit: CI/CD pipeline passed [skip ci]"
+                            git push origin master
+                            echo "✅ Изменения запушены в GitHub"
+                        else
+                            echo "ℹ️ Нет изменений для пуша"
+                        fi
                     '''
-                }
-            }
-        }
-
-        stage('Health Check') {
-            steps {
-                script {
-                    echo '🏥 Проверка работоспособности...'
-                    sh 'sleep 15'
-                    sh 'curl -f http://localhost:5000/health || echo "⚠️ Бэкенд не отвечает, но это нормально если эндпоинт не реализован"'
                 }
             }
         }
@@ -102,34 +78,21 @@ FRONTEND_URL=http://localhost'''
         stage('Info') {
             steps {
                 echo '✅ CI/CD Pipeline выполнен!'
-                sh '''
-                    echo "📦 Запущенные контейнеры:"
-                    docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-                    echo ""
-                    echo "🔍 Логи бэкенда:"
-                    docker logs quiz-backend --tail=20 2>/dev/null || echo "Бэкенд не запущен"
-                '''
+                sh 'node --version'
+                sh 'npm --version'
             }
         }
     }
 
     post {
         always {
-            script {
-                sh '''
-                    docker compose logs --tail=30 2>/dev/null || docker-compose logs --tail=30 2>/dev/null || true
-                '''
-                cleanWs()
-            }
+            cleanWs()
         }
         success {
-            echo '🎉 Pipeline успешен!'
+            echo '🎉 Все тесты прошли успешно! Код отправлен в GitHub.'
         }
         failure {
-            echo '❌ Pipeline упал'
-            sh '''
-                docker compose logs --tail=50 2>/dev/null || docker-compose logs --tail=50 2>/dev/null || true
-            '''
+            echo '❌ Тесты не прошли! Пуш в GitHub отменен.'
         }
     }
 }
