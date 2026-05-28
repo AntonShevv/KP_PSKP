@@ -54,22 +54,22 @@ pipeline {
                         git config user.email "jenkins@ci-cd.local"
                         git config user.name "Jenkins CI"
                         
-                        # СОЗДАЕМ ФАЙЛ С ИЗМЕНЕНИЯМИ
+                        # Переключаемся на ветку master
+                        git checkout master || git checkout -b master
+                        
+                        # Создаем файл с информацией
                         echo "Build #${BUILD_NUMBER}" > .build-info
                         echo "Completed at: $(date)" >> .build-info
                         echo "Tests: 16 passed" >> .build-info
                         
-                        # Добавляем файл
+                        # Добавляем и коммитим
                         git add .build-info
+                        git commit -m "CI: Auto-commit build #${BUILD_NUMBER} [skip ci]" || echo "Nothing to commit"
                         
-                        # Проверяем есть ли изменения
-                        if git diff --cached --quiet; then
-                            echo "ℹ️ Нет изменений для коммита"
-                        else
-                            git commit -m "CI: Auto-commit build #${BUILD_NUMBER} [skip ci]"
-                            git push origin master
-                            echo "✅ Изменения запушены в GitHub"
-                        fi
+                        # Пушим в master
+                        git push origin master
+                        
+                        echo "✅ Изменения запушены в GitHub"
                     '''
                 }
             }
