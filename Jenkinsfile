@@ -5,6 +5,11 @@ pipeline {
         nodejs 'NodeJS-20'
     }
 
+    environment {
+        // Получаем credentials для GitHub
+        GITHUB_CREDS = credentials('github-credentials')
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -54,32 +59,26 @@ pipeline {
                         git config user.email "jenkins@ci-cd.local"
                         git config user.name "Jenkins CI"
                         
-                        # Переключаемся на ветку master
-                        git checkout master || git checkout -b master
+                        # Меняем remote URL, используя credentials
+                        git remote set-url origin https://${GITHUB_CREDS_USR}:${GITHUB_CREDS_PSW}@github.com/AntonShevv/KP_PSKP.git
                         
-                        # Создаем файл с информацией
+                        # Проверяем ветку
+                        git checkout master
+                        
+                        # Обновляем файл
                         echo "Build #${BUILD_NUMBER}" > .build-info
                         echo "Completed at: $(date)" >> .build-info
                         echo "Tests: 16 passed" >> .build-info
                         
-                        # Добавляем и коммитим
                         git add .build-info
                         git commit -m "CI: Auto-commit build #${BUILD_NUMBER} [skip ci]" || echo "Nothing to commit"
                         
-                        # Пушим в master
+                        # Пушим
                         git push origin master
                         
                         echo "✅ Изменения запушены в GitHub"
                     '''
                 }
-            }
-        }
-
-        stage('Info') {
-            steps {
-                echo '✅ CI/CD Pipeline выполнен!'
-                sh 'node --version'
-                sh 'npm --version'
             }
         }
     }
