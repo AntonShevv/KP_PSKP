@@ -48,24 +48,39 @@ pipeline {
         stage('Push to GitHub') {
             steps {
                 echo '✅ Тесты прошли успешно! Пушим в GitHub...'
-                
+
                 script {
-                    withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
-                        sh '''
+                    withCredentials([usernamePassword(
+                        credentialsId: 'github-creds',
+                        usernameVariable: 'GITHUB_USER',
+                        passwordVariable: 'GITHUB_TOKEN'
+                    )]) {
+                        sh """
+                            # Переключаемся на ветку master
+                            git checkout master
+
+                            # Настройка пользователя
                             git config user.email "jenkins@ci-cd.local"
                             git config user.name "Jenkins CI"
-                            
-                            # Создаем файл
+
+                            # Создаем файл с информацией о сборке
                             echo "Build #${BUILD_NUMBER}" > .build-info
-                            echo "Completed at: $(date)" >> .build-info
-                            echo "Tests: 16 passed" >> .build-info
-                            
+                            echo "Completed at: \$(date)" >> .build-info
+                            echo "Tests: 16 PASSED" >> .build-info
+                            echo "Status: SUCCESS" >> .build-info
+
+                            # Добавляем и коммитим
                             git add .build-info
                             git commit -m "CI: Auto-commit build #${BUILD_NUMBER} [skip ci]" || echo "Nothing to commit"
-                            
-                            # Используем curl для пуша (обходит проблемы с токеном)
-                            git push https://AntonShevv:${GITHUB_TOKEN}@github.com/AntonShevv/KP_PSKP.git HEAD:master
-                        '''
+
+                            # Меняем remote на URL с токеном
+                            git remote set-url origin https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com/AntonShevv/KP_PSKP.git
+
+                            # Пушим
+                            git push origin master
+
+                            echo "✅ Изменения успешно запушены в GitHub"
+                        """
                     }
                 }
             }
