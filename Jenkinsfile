@@ -29,7 +29,7 @@ pipeline {
                             sh 'npm run build'
                         }
                     } else {
-                        echo '⚠️ Frontend не найден, пропускаем...'
+                        echo 'не найден'
                         sh 'mkdir -p frontend/build'
                         sh 'echo "<html><body><h1>Quiz Master API</h1></body></html>" > frontend/build/index.html'
                     }
@@ -47,7 +47,7 @@ pipeline {
 
         stage('Push to GitHub') {
             steps {
-                echo '✅ Тесты прошли успешно! Пушим в GitHub...'
+                echo 'Тесты прошли успешно!'
 
                 script {
                     withCredentials([usernamePassword(
@@ -61,10 +61,10 @@ pipeline {
                             git config user.email "jenkins@ci-cd.local"
                             git config user.name "Jenkins CI"
 
-                            # Синхронизация
+                
                             git pull origin master --rebase || true
 
-                            # Создаем файл с информацией о сборке
+                    
                             echo "Build #${BUILD_NUMBER}" > .build-info
                             echo "Completed at: \$(date)" >> .build-info
                             echo "Tests: 16 PASSED" >> .build-info
@@ -74,10 +74,10 @@ pipeline {
 
                             git commit -m "CI: Auto-commit build #${BUILD_NUMBER} [skip ci]" || true
 
-                            # Меняем URL на URL с токеном
+              
                             git remote set-url origin https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com/AntonShevv/KP_PSKP.git
 
-                            # Пушим
+                     
                             git push origin master
                         """
                     }
@@ -88,10 +88,10 @@ pipeline {
 
     post {
         success {
-            echo '🎉 Все тесты прошли успешно!'
+            echo 'Все тесты прошли успешно!'
         }
         failure {
-            echo '❌ Тесты не прошли!'
+            echo 'Тесты не прошли!'
         }
     }
 }
