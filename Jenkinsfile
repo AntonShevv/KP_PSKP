@@ -6,7 +6,6 @@ pipeline {
     }
 
     environment {
-        // Используем правильный формат для токена
         GIT_TOKEN = credentials('github-token')
     }
 
@@ -55,36 +54,28 @@ pipeline {
                 echo '✅ Тесты прошли успешно! Пушим в GitHub...'
                 
                 script {
-                    // Используем withCredentials для явной передачи токена
-                    withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
-                        sh '''
-                            git config user.email "jenkins@ci-cd.local"
-                            git config user.name "Jenkins CI"
-                            
-                            # Меняем remote URL, используя токен
-                            git remote set-url origin https://AntonShevv:${GITHUB_TOKEN}@github.com/AntonShevv/KP_PSKP.git
-                            
-                            # Проверяем ветку
-                            git checkout master
-                            
-                            # Синхронизируем с удаленным репозиторием
-                            git fetch origin
-                            git reset --soft origin/master
-                            
-                            # Создаем файл
-                            echo "Build #${BUILD_NUMBER}" > .build-info
-                            echo "Completed at: $(date)" >> .build-info
-                            echo "Tests: 16 passed" >> .build-info
-                            
-                            git add .build-info
-                            git commit -m "CI: Auto-commit build #${BUILD_NUMBER} [skip ci]" || echo "Nothing to commit"
-                            
-                            # Пушим
-                            git push origin master
-                            
-                            echo "✅ Изменения запушены в GitHub"
-                        '''
-                    }
+                    // Для Secret text используем просто переменную
+                    sh '''
+                        git config user.email "jenkins@ci-cd.local"
+                        git config user.name "Jenkins CI"
+                        
+                        # Используем токен из credentials
+                        git remote set-url origin https://AntonShevv:${GIT_TOKEN}@github.com/AntonShevv/KP_PSKP.git
+                        
+                        git checkout master
+                        
+                        # Создаем файл
+                        echo "Build #${BUILD_NUMBER}" > .build-info
+                        echo "Completed at: $(date)" >> .build-info
+                        echo "Tests: 16 passed" >> .build-info
+                        
+                        git add .build-info
+                        git commit -m "CI: Auto-commit build #${BUILD_NUMBER} [skip ci]" || echo "Nothing to commit"
+                        
+                        git push origin master
+                        
+                        echo "✅ Изменения запушены в GitHub"
+                    '''
                 }
             }
         }
