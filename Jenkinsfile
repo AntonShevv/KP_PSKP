@@ -5,10 +5,6 @@ pipeline {
         nodejs 'NodeJS-20'
     }
 
-    environment {
-        GIT_TOKEN = credentials('github-token')
-    }
-
     stages {
         stage('Checkout') {
             steps {
@@ -54,21 +50,23 @@ pipeline {
                 echo '✅ Тесты прошли успешно! Пушим в GitHub...'
                 
                 script {
-                    sh '''
-                        git config user.email "jenkins@ci-cd.local"
-                        git config user.name "Jenkins CI"
-                        
-                        # Создаем файл
-                        echo "Build #${BUILD_NUMBER}" > .build-info
-                        echo "Completed at: $(date)" >> .build-info
-                        echo "Tests: 16 passed" >> .build-info
-                        
-                        git add .build-info
-                        git commit -m "CI: Auto-commit build #${BUILD_NUMBER} [skip ci]" || echo "Nothing to commit"
-                        
-                        # Пушим напрямую с токеном (без set-url)
-                        git push https://AntonShevv:${GIT_TOKEN}@github.com/AntonShevv/KP_PSKP.git master
-                    '''
+                    withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
+                        sh '''
+                            git config user.email "jenkins@ci-cd.local"
+                            git config user.name "Jenkins CI"
+                            
+                            # Создаем файл
+                            echo "Build #${BUILD_NUMBER}" > .build-info
+                            echo "Completed at: $(date)" >> .build-info
+                            echo "Tests: 16 passed" >> .build-info
+                            
+                            git add .build-info
+                            git commit -m "CI: Auto-commit build #${BUILD_NUMBER} [skip ci]" || echo "Nothing to commit"
+                            
+                            # Используем curl для пуша (обходит проблемы с токеном)
+                            git push https://AntonShevv:${GITHUB_TOKEN}@github.com/AntonShevv/KP_PSKP.git HEAD:master
+                        '''
+                    }
                 }
             }
         }
