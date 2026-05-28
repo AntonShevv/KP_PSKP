@@ -55,32 +55,26 @@ pipeline {
                         usernameVariable: 'GITHUB_USER',
                         passwordVariable: 'GITHUB_TOKEN'
                     )]) {
-                        sh """
-                            # Переключаемся на ветку master
+                        sh '''
                             git checkout master
-
-                            # Настройка пользователя
                             git config user.email "jenkins@ci-cd.local"
                             git config user.name "Jenkins CI"
 
-                            # Создаем файл с информацией о сборке
+                            # Сначала получаем последние изменения
+                            git pull origin master --rebase || true
+
+                            # Создаем файл
                             echo "Build #${BUILD_NUMBER}" > .build-info
-                            echo "Completed at: \$(date)" >> .build-info
+                            echo "Completed at: $(date)" >> .build-info
                             echo "Tests: 16 PASSED" >> .build-info
                             echo "Status: SUCCESS" >> .build-info
 
-                            # Добавляем и коммитим
                             git add .build-info
                             git commit -m "CI: Auto-commit build #${BUILD_NUMBER} [skip ci]" || echo "Nothing to commit"
 
-                            # Меняем remote на URL с токеном
-                            git remote set-url origin https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com/AntonShevv/KP_PSKP.git
-
                             # Пушим
                             git push origin master
-
-                            echo "✅ Изменения успешно запушены в GitHub"
-                        """
+                        '''
                     }
                 }
             }
